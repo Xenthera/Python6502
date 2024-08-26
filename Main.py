@@ -38,14 +38,14 @@ class Game:
         self.cpu = Cpu6502()
         self.cpu.reset(self.memory)
         self.memory[0xFFFC] = INS_JSR
-        self.memory[0xFFFD] = 0x42
-        self.memory[0xFFFE] = 0x42
-        self.memory[0x4242] = INS_JSR
-        self.memory[0x4243] = 0x69
-        self.memory[0x4244] = 0x69
+        self.memory[0xFFFD] = 0x34
+        self.memory[0xFFFE] = 0x12
+        self.memory[0x1234] = INS_JSR
+        self.memory[0x1235] = 0x69
+        self.memory[0x1236] = 0x69
         self.memory[0x6969] = INS_JSR
-        self.memory[0x696A] = 0x42
-        self.memory[0x696B] = 0x42
+        self.memory[0x696A] = 0x34
+        self.memory[0x696B] = 0x12
         self.c = CycleCounter(18000000000000)
 
     def start(self):

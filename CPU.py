@@ -46,6 +46,19 @@ INS_LDA_ABSX = 0xBD
 INS_LDA_ABSY = 0xB9
 INS_LDA_INDX = 0xA1
 INS_LDA_INDY = 0xB1
+
+INS_LDX_IM = 0xA2
+INS_LDX_ZP = 0xA6
+INS_LDX_ZPY = 0xB6
+INS_LDX_ABS = 0xAE
+INS_LDX_ABSY = 0xBE
+
+INS_LDY_IM = 0xA0
+INS_LDY_ZP = 0xA4
+INS_LDY_ZPX = 0xB4
+INS_LDY_ABS = 0xAC
+INS_LDY_ABSX = 0xBC
+
 INS_JSR = 0x20
 
 class Cpu6502:
@@ -114,34 +127,41 @@ class Cpu6502:
         word_data = low | (high << 8)
         return word_data & 0xFFFF
 
-    def LDA_set_status(self):
-        self.Z = (self.A == 0)
-        self.N = (self.A & 0b10000000) > 0
+    def LD_register_set_status(self, register):
+        reg_value = getattr(self, register)
+        self.Z = (reg_value == 0)
+        self.N = (reg_value & 0b10000000) > 0
+
+    def LD_register_IM(self, register, cycles, memory):
+        setattr(self, register, self.fetch_byte(cycles, memory))
+        self.LD_register_set_status(register)
 
     def tick(self, cycles : CycleCounter, memory):
         ins = self.fetch_byte(cycles, memory)
 
         if ins == INS_LDA_IM:
-            value = self.fetch_byte(cycles, memory)
-            self.A = value
-            self.LDA_set_status()
+            self.LD_register_IM("A", cycles, memory)
+        elif ins == INS_LDX_IM:
+            self.LD_register_IM("X", cycles, memory)
+        elif ins == INS_LDY_IM:
+            self.LD_register_IM("Y", cycles, memory)
 
         elif ins == INS_LDA_ZP:
             zero_page_address = self.fetch_byte(cycles, memory)
             self.A = self.read_byte(cycles, memory, zero_page_address)
-            self.LDA_set_status()
+            #self.LD_register_set_status()
 
         elif ins == INS_LDA_ZPX:
             zero_page_address = self.fetch_byte(cycles, memory)
             zero_page_address += self.X
             cycles -= 1
             self.A = self.read_byte(cycles, memory, zero_page_address & 0xFF)
-            self.LDA_set_status()
+            #self.LD_register_set_status()
 
         elif ins == INS_LDA_ABS:
             abs_addr = self.fetch_word(cycles, memory)
             self.A = self.read_byte(cycles, memory, abs_addr)
-            self.LDA_set_status()
+            #self.LD_register_set_status()
 
         elif ins == INS_LDA_ABSX:
             abs_addr = self.fetch_word(cycles, memory)
@@ -149,7 +169,7 @@ class Cpu6502:
             self.A = self.read_byte(cycles, memory, abs_addr_x)
             if abs_addr >> 8 != abs_addr_x >> 8:  # page crossed
                 cycles -= 1
-            self.LDA_set_status()
+            #self.LD_register_set_status()
 
         elif ins == INS_LDA_ABSY:
             abs_addr = self.fetch_word(cycles, memory)
@@ -157,7 +177,7 @@ class Cpu6502:
             self.A = self.read_byte(cycles, memory, abs_addr_y)
             if abs_addr >> 8 != abs_addr_y >> 8:  # page crossed
                 cycles -= 1
-            self.LDA_set_status()
+            #self.LD_register_set_status()
 
         elif ins == INS_LDA_INDX:
             zp_address = self.fetch_byte(cycles, memory)
@@ -165,6 +185,8 @@ class Cpu6502:
             cycles -= 1
             effective_address = self.read_word(cycles, memory, zp_address)
             self.A = self.read_byte(cycles, memory, effective_address)
+            #self.LD_register_set_status()
+
         elif ins == INS_LDA_INDY:
             zp_address = self.fetch_byte(cycles, memory)
             effective_address = self.read_word(cycles, memory, zp_address)
@@ -172,6 +194,8 @@ class Cpu6502:
             self.A = self.read_byte(cycles, memory, effective_address_y)
             if effective_address >> 8 != effective_address_y >> 8:  # page crossed
                 cycles -= 1
+            #self.LD_register_set_status()
+
 
         elif ins == INS_JSR:
             subroutine_address = self.fetch_word(cycles, memory)
