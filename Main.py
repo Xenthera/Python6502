@@ -1,5 +1,7 @@
 import pygame
 
+
+import TestSuite
 import CPU
 from CPU import *
 
@@ -44,7 +46,7 @@ class Game:
         self.memory[0x6969] = INS_JSR
         self.memory[0x696A] = 0x42
         self.memory[0x696B] = 0x42
-        self.c = CycleCounter(18)
+        self.c = CycleCounter(18000000000000)
 
     def start(self):
         while self.is_running:
@@ -66,10 +68,6 @@ class Game:
     def update(self):
 
         self.handle_input()
-
-        if self.c.cycleCount > 0:
-            for i in range(1):
-                self.cpu.tick(self.c, self.memory)
 
         self.screen.fill((50, 150, 120))
 
@@ -130,3 +128,4 @@ class Game:
 if __name__ == "__main__":
     game = Game()
     game.start()
+

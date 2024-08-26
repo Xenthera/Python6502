@@ -123,7 +123,7 @@ class Cpu6502:
             zero_page_address = self.fetch_byte(cycles, memory)
             zero_page_address += self.X
             cycles -= 1
-            self.A = self.read_byte(cycles, memory, zero_page_address)
+            self.A = self.read_byte(cycles, memory, zero_page_address & 0xFF)
             self.LDA_set_status()
 
         elif ins == INS_JSR:
@@ -137,6 +137,14 @@ class Cpu6502:
             pass
             # print("Instruction not handled: " + hex(ins))
 
+    def execute(self, cycles : CycleCounter, memory):
+
+        cyclesRequested = cycles.cycleCount
+
+        while cycles.cycleCount > 0:
+            self.tick(cycles, memory)
+
+        return cyclesRequested - cycles.cycleCount
     # def decode(self, opcode):
     #     high_nibble = opcode >> 4
     #     low_nibble = opcode & 0x0F
