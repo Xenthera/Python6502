@@ -1,4 +1,5 @@
 import random
+from bdb import effective
 
 
 class Memory:
@@ -40,6 +41,11 @@ asm_mnemonic = {0xA9 : "LDA(IMM)",
 INS_LDA_IM = 0xA9
 INS_LDA_ZP = 0xA5
 INS_LDA_ZPX = 0xB5
+INS_LDA_ABS = 0xAD
+INS_LDA_ABSX = 0xBD
+INS_LDA_ABSY = 0xB9
+INS_LDA_INDX = 0xA1
+INS_LDA_INDY = 0xB1
 INS_JSR = 0x20
 
 class Cpu6502:
@@ -82,7 +88,7 @@ class Cpu6502:
         byte_data = memory[self.PC] & 0xFF
         self.PC += 1
         cycles -= 1
-        return byte_data
+        return byte_data & 0xFF
 
     def fetch_word(self, cycles: CycleCounter, memory: Memory):
 
@@ -97,10 +103,16 @@ class Cpu6502:
         return word_data & 0xFFFF
 
     def read_byte(self, cycles : CycleCounter, memory : Memory, address):
-        byte_data = memory[address] & 0xFF
+        byte_data = memory[address & 0xFFFF] & 0xFF
         cycles -= 1
-        return byte_data
+        return byte_data & 0xFF
 
+    def read_word(self, cycles : CycleCounter, memory : Memory, address):
+        low = self.read_byte(cycles, memory, address)
+        high = self.read_byte(cycles, memory, address + 1)
+
+        word_data = low | (high << 8)
+        return word_data & 0xFFFF
 
     def LDA_set_status(self):
         self.Z = (self.A == 0)
@@ -126,6 +138,41 @@ class Cpu6502:
             self.A = self.read_byte(cycles, memory, zero_page_address & 0xFF)
             self.LDA_set_status()
 
+        elif ins == INS_LDA_ABS:
+            abs_addr = self.fetch_word(cycles, memory)
+            self.A = self.read_byte(cycles, memory, abs_addr)
+            self.LDA_set_status()
+
+        elif ins == INS_LDA_ABSX:
+            abs_addr = self.fetch_word(cycles, memory)
+            abs_addr_x = abs_addr + (self.X & 0xFF)
+            self.A = self.read_byte(cycles, memory, abs_addr_x)
+            if abs_addr >> 8 != abs_addr_x >> 8:  # page crossed
+                cycles -= 1
+            self.LDA_set_status()
+
+        elif ins == INS_LDA_ABSY:
+            abs_addr = self.fetch_word(cycles, memory)
+            abs_addr_y = abs_addr + (self.Y & 0xFF)
+            self.A = self.read_byte(cycles, memory, abs_addr_y)
+            if abs_addr >> 8 != abs_addr_y >> 8:  # page crossed
+                cycles -= 1
+            self.LDA_set_status()
+
+        elif ins == INS_LDA_INDX:
+            zp_address = self.fetch_byte(cycles, memory)
+            zp_address += self.X & 0xFF
+            cycles -= 1
+            effective_address = self.read_word(cycles, memory, zp_address)
+            self.A = self.read_byte(cycles, memory, effective_address)
+        elif ins == INS_LDA_INDY:
+            zp_address = self.fetch_byte(cycles, memory)
+            effective_address = self.read_word(cycles, memory, zp_address)
+            effective_address_y = effective_address + self.Y & 0xFFFF
+            self.A = self.read_byte(cycles, memory, effective_address_y)
+            if effective_address >> 8 != effective_address_y >> 8:  # page crossed
+                cycles -= 1
+
         elif ins == INS_JSR:
             subroutine_address = self.fetch_word(cycles, memory)
             memory.write_word( self.PC - 1, self.SP, cycles)
@@ -134,7 +181,7 @@ class Cpu6502:
             cycles -= 1
 
         else:
-            pass
+            raise Exception("Invalid instruction: " + hex(ins))
             # print("Instruction not handled: " + hex(ins))
 
     def execute(self, cycles : CycleCounter, memory):
