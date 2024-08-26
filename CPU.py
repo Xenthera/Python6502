@@ -182,7 +182,6 @@ class Cpu6502:
 
         else:
             raise Exception("Invalid instruction: " + hex(ins))
-            # print("Instruction not handled: " + hex(ins))
 
     def execute(self, cycles : CycleCounter, memory):
 
