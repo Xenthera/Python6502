@@ -127,74 +127,119 @@ class Cpu6502:
         word_data = low | (high << 8)
         return word_data & 0xFFFF
 
+    # Addressing mode handling
+    # Zero Page
+    def addr_zero_page(self, cycles: CycleCounter, memory : Memory):
+        zero_page_address = self.fetch_byte(cycles, memory)
+        return zero_page_address & 0xFF
+
+    def addr_zero_page_x(self, cycles : CycleCounter, memory : Memory):
+        zero_page_address = self.fetch_byte(cycles, memory)
+        zero_page_address += self.X
+        cycles -= 1
+        return zero_page_address & 0xFF
+
+    def addr_zero_page_y(self, cycles : CycleCounter, memory : Memory):
+        zero_page_address = self.fetch_byte(cycles, memory)
+        zero_page_address += self.Y
+        cycles -= 1
+        return zero_page_address & 0xFF
+
+    def addr_absolute(self, cycles : CycleCounter, memory : Memory):
+        abs_addr = self.fetch_word(cycles, memory)
+        return abs_addr
+
+    def addr_absolute_x(self, cycles : CycleCounter, memory : Memory):
+        abs_addr = self.fetch_word(cycles, memory)
+        abs_addr_x = abs_addr + (self.X & 0xFF)
+        if abs_addr >> 8 != abs_addr_x >> 8:  # page crossed
+            cycles -= 1
+        return abs_addr_x & 0xFFFF
+
+    def addr_absolute_y(self, cycles : CycleCounter, memory : Memory):
+        abs_addr = self.fetch_word(cycles, memory)
+        abs_addr_y = abs_addr + (self.Y & 0xFF)
+        if abs_addr >> 8 != abs_addr_y >> 8:  # page crossed
+            cycles -= 1
+        return abs_addr_y & 0xFFFF
+
     def LD_register_set_status(self, register):
         reg_value = getattr(self, register)
         self.Z = (reg_value == 0)
         self.N = (reg_value & 0b10000000) > 0
 
-    def LD_register_IM(self, register, cycles, memory):
-        setattr(self, register, self.fetch_byte(cycles, memory))
+    def load_register(self, cycles, memory, address, register):
+        setattr(self, register, self.read_byte(cycles, memory, address))
         self.LD_register_set_status(register)
 
-    def tick(self, cycles : CycleCounter, memory):
+    def tick(self, cycles : CycleCounter, memory : Memory):
         ins = self.fetch_byte(cycles, memory)
 
         if ins == INS_LDA_IM:
-            self.LD_register_IM("A", cycles, memory)
+            self.A = self.fetch_byte(cycles, memory)
+            self.LD_register_set_status("A")
         elif ins == INS_LDX_IM:
-            self.LD_register_IM("X", cycles, memory)
+            self.X = self.fetch_byte(cycles, memory)
+            self.LD_register_set_status("X")
         elif ins == INS_LDY_IM:
-            self.LD_register_IM("Y", cycles, memory)
+            self.Y = self.fetch_byte(cycles, memory)
+            self.LD_register_set_status("Y")
 
         elif ins == INS_LDA_ZP:
-            zero_page_address = self.fetch_byte(cycles, memory)
-            self.A = self.read_byte(cycles, memory, zero_page_address)
-            #self.LD_register_set_status()
-
+            address = self.addr_zero_page(cycles, memory)
+            self.load_register(cycles, memory, address, "A")
+        elif ins == INS_LDX_ZP:
+            address = self.addr_zero_page(cycles, memory)
+            self.load_register(cycles, memory, address, "X")
+        elif ins == INS_LDY_ZP:
+            address = self.addr_zero_page(cycles, memory)
+            self.load_register(cycles, memory, address, "Y")
         elif ins == INS_LDA_ZPX:
-            zero_page_address = self.fetch_byte(cycles, memory)
-            zero_page_address += self.X
-            cycles -= 1
-            self.A = self.read_byte(cycles, memory, zero_page_address & 0xFF)
-            #self.LD_register_set_status()
-
+            address = self.addr_zero_page_x(cycles, memory)
+            self.load_register(cycles, memory, address, "A")
+        elif ins == INS_LDY_ZPX:
+            address = self.addr_zero_page_x(cycles, memory)
+            self.load_register(cycles, memory, address, "Y")
+        elif ins == INS_LDX_ZPY:
+            address = self.addr_zero_page_y(cycles, memory)
+            self.load_register(cycles, memory, address, "X")
         elif ins == INS_LDA_ABS:
-            abs_addr = self.fetch_word(cycles, memory)
-            self.A = self.read_byte(cycles, memory, abs_addr)
-            #self.LD_register_set_status()
+            address = self.addr_absolute(cycles, memory)
+            self.load_register(cycles, memory, address, "A")
+        elif ins == INS_LDX_ABS:
+            address = self.addr_absolute(cycles, memory)
+            self.load_register(cycles, memory, address, "X")
+        elif ins == INS_LDY_ABS:
+            address = self.addr_absolute(cycles, memory)
+            self.load_register(cycles, memory, address, "Y")
 
         elif ins == INS_LDA_ABSX:
-            abs_addr = self.fetch_word(cycles, memory)
-            abs_addr_x = abs_addr + (self.X & 0xFF)
-            self.A = self.read_byte(cycles, memory, abs_addr_x)
-            if abs_addr >> 8 != abs_addr_x >> 8:  # page crossed
-                cycles -= 1
-            #self.LD_register_set_status()
+            address = self.addr_absolute_x(cycles, memory)
+            self.load_register(cycles, memory, address, "A")
+        elif ins == INS_LDY_ABSX:
+            address = self.addr_absolute_x(cycles, memory)
+            self.load_register(cycles, memory, address, "Y")
 
         elif ins == INS_LDA_ABSY:
-            abs_addr = self.fetch_word(cycles, memory)
-            abs_addr_y = abs_addr + (self.Y & 0xFF)
-            self.A = self.read_byte(cycles, memory, abs_addr_y)
-            if abs_addr >> 8 != abs_addr_y >> 8:  # page crossed
-                cycles -= 1
-            #self.LD_register_set_status()
+            address = self.addr_absolute_y(cycles, memory)
+            self.load_register(cycles, memory, address, "A")
+        elif ins == INS_LDX_ABSY:
+            address = self.addr_absolute_y(cycles, memory)
+            self.load_register(cycles, memory, address, "X")
 
         elif ins == INS_LDA_INDX:
             zp_address = self.fetch_byte(cycles, memory)
             zp_address += self.X & 0xFF
             cycles -= 1
             effective_address = self.read_word(cycles, memory, zp_address)
-            self.A = self.read_byte(cycles, memory, effective_address)
-            #self.LD_register_set_status()
-
+            self.load_register(cycles, memory, effective_address, "A")
         elif ins == INS_LDA_INDY:
             zp_address = self.fetch_byte(cycles, memory)
             effective_address = self.read_word(cycles, memory, zp_address)
             effective_address_y = effective_address + self.Y & 0xFFFF
-            self.A = self.read_byte(cycles, memory, effective_address_y)
             if effective_address >> 8 != effective_address_y >> 8:  # page crossed
                 cycles -= 1
-            #self.LD_register_set_status()
+            self.load_register(cycles, memory, effective_address_y, "A")
 
 
         elif ins == INS_JSR:
@@ -215,37 +260,3 @@ class Cpu6502:
             self.tick(cycles, memory)
 
         return cyclesRequested - cycles.cycleCount
-    # def decode(self, opcode):
-    #     high_nibble = opcode >> 4
-    #     low_nibble = opcode & 0x0F
-    #     if low_nibble == 8:
-    #         # SB1 Logic
-    #         pass
-    #     elif low_nibble == 0xA and high_nibble > 7:
-    #         # SB2 Logic
-    #         pass
-    #     else:
-    #         # Groups G1-G3
-    #         # aaa bbb cc
-    #         aaa = (opcode & 0b11100000) >> 5  # Operation
-    #         bbb = (opcode & 0b00011100) >> 2  # Addressing mode
-    #         cc = opcode & 0b00000011  # Group number
-    #
-    #         if cc == 1:
-    #             # G1 address decoding and opcode logic
-    #             pass
-    #         elif cc == 2:
-    #             # G2 address decoding and opcode logic
-    #             pass
-    #         elif cc == 3:
-    #             # xxy 100 00
-    #             if bbb == 4:
-    #                 # Conditional branching logic
-    #                 pass
-    #             elif bbb == 0 and not (aaa & 0x4):
-    #                 # I/S logic
-    #                 pass
-    #             else:
-    #                 # G3 address decoding and opcode logic
-    #                 pass
-

@@ -30,6 +30,9 @@ class Test6502:
 
     def LD_Reg_ZP(self, opcode, register):
         self.cpu.reset(self.mem)
+
+        self.cpu.N = self.cpu.Z = True
+
         self.mem[0xFFFC] = opcode
         self.mem[0xFFFD] = 0x42
         self.mem[0x0042] = 0x37
@@ -47,6 +50,9 @@ class Test6502:
         self.cpu.reset(self.mem)
 
         self.cpu.X = 5
+
+        self.cpu.N = self.cpu.Z = True
+
 
         self.mem[0xFFFC] = opcode
         self.mem[0xFFFD] = 0x42
@@ -66,6 +72,8 @@ class Test6502:
 
         self.cpu.Y = 5
 
+        self.cpu.N = self.cpu.Z = True
+
         self.mem[0xFFFC] = opcode
         self.mem[0xFFFD] = 0x42
         self.mem[0x0047] = 0x37
@@ -82,6 +90,7 @@ class Test6502:
     def LD_Reg_Abs(self, opcode, register):
         self.cpu.reset(self.mem)
 
+        self.cpu.N = self.cpu.Z = True
 
         self.mem[0xFFFC] = opcode
         self.mem[0xFFFD] = 0x80
@@ -102,6 +111,8 @@ class Test6502:
 
         self.cpu.X = 1
 
+        self.cpu.N = self.cpu.Z = True
+
         self.mem[0xFFFC] = opcode
         self.mem[0xFFFD] = 0x80
         self.mem[0xFFFE] = 0x44
@@ -120,6 +131,8 @@ class Test6502:
         self.cpu.reset(self.mem)
 
         self.cpu.Y = 1
+
+        self.cpu.N = self.cpu.Z = True
 
         self.mem[0xFFFC] = opcode
         self.mem[0xFFFD] = 0x80
@@ -140,6 +153,8 @@ class Test6502:
 
         self.cpu.X = 0xFF
 
+        self.cpu.N = self.cpu.Z = True
+
         self.mem[0xFFFC] = opcode
         self.mem[0xFFFD] = 0x02
         self.mem[0xFFFE] = 0x44  # 0x4402
@@ -158,6 +173,8 @@ class Test6502:
         self.cpu.reset(self.mem)
 
         self.cpu.Y = 0xFF
+
+        self.cpu.N = self.cpu.Z = True
 
         self.mem[0xFFFC] = opcode
         self.mem[0xFFFD] = 0x02
@@ -271,6 +288,9 @@ class Test6502:
 
         self.cpu.X = 0x04
 
+        self.cpu.N = self.cpu.Z = True
+
+
         self.mem[0xFFFC] = INS_LDA_INDX
         self.mem[0xFFFD] = 0x02
         self.mem[0x0006] = 0x00  # 0x2 + 0x4
@@ -290,6 +310,9 @@ class Test6502:
         self.cpu.reset(self.mem)
 
         self.cpu.Y = 0x04
+
+        self.cpu.N = self.cpu.Z = True
+
 
         self.mem[0xFFFC] = INS_LDA_INDY
         self.mem[0xFFFD] = 0x02
