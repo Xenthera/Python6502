@@ -37,7 +37,7 @@ asm_mnemonic = {0xA9 : "LDA(IMM)",
                 0xA5 : "LDA(ZP)",
                 0xB5 : "LDA(ZPX)",
                 0x20 : "JSR"}
-# opcodes
+#region opcodes
 INS_LDA_IM = 0xA9
 INS_LDA_ZP = 0xA5
 INS_LDA_ZPX = 0xB5
@@ -59,7 +59,25 @@ INS_LDY_ZPX = 0xB4
 INS_LDY_ABS = 0xAC
 INS_LDY_ABSX = 0xBC
 
+INS_STA_ZP = 0x85
+INS_STA_ZPX = 0x95
+INS_STA_ABS = 0x8D
+INS_STA_ABSX = 0x9D
+INS_STA_ABSY = 0x99
+INS_STA_INDX = 0x81
+
+INS_STX_ZP = 0x86
+INS_STX_ABS = 0x8E
+
+INS_STY_ZP = 0x84
+INS_STY_ABS = 0x8C
+INS_STY_ZPX = 0x94
+
+
+
 INS_JSR = 0x20
+
+#endregion
 
 class Cpu6502:
 
@@ -240,7 +258,8 @@ class Cpu6502:
             if effective_address >> 8 != effective_address_y >> 8:  # page crossed
                 cycles -= 1
             self.load_register(cycles, memory, effective_address_y, "A")
-
+        elif ins == INS_STA_ZP:
+            address = self.addr_zero_page(cycles, memory)
 
         elif ins == INS_JSR:
             subroutine_address = self.fetch_word(cycles, memory)

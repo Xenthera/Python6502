@@ -1,6 +1,7 @@
 from CPU import *
 import copy
-class Test6502:
+
+class TestLoadRegisterOperations:
 
     mem = Memory()
     cpu = Cpu6502()
@@ -379,3 +380,154 @@ class Test6502:
         cyclesUsed = self.cpu.execute(CycleCounter(1), self.mem)
         assert cyclesUsed == 2
 #endregion
+
+
+class TestStoreRegisterOperations:
+
+    mem = Memory()
+    cpu = Cpu6502()
+
+    def VerifyUnmodifiedFlagsST_Register(self, cpuCopy):
+        assert self.cpu.C == cpuCopy.C
+        assert self.cpu.I == cpuCopy.I
+        assert self.cpu.D == cpuCopy.D
+        assert self.cpu.B == cpuCopy.B
+        assert self.cpu.V == cpuCopy.V
+        assert self.cpu.N == cpuCopy.N
+        assert self.cpu.Z == cpuCopy.Z
+
+    def ST_register_ZP(self, opcode, register):
+        setattr(self.cpu, register, 0x2F)
+        self.mem[0xFFFC] = opcode
+        self.mem[0xFFFD] = 0x80
+        self.mem[0x0080] = 0x00
+
+        cpu_copy = copy.deepcopy(self.cpu)
+
+        cyclesUsed = self.cpu.execute(CycleCounter(3), self.mem)
+        assert cyclesUsed == 3
+
+        assert self.mem[0x0080] == 0x2F
+
+        self.VerifyUnmodifiedFlagsST_Register(cpu_copy)
+
+    def ST_register_ABS(self, opcode, register):
+        setattr(self.cpu, register, 0x2F)
+        self.mem[0xFFFC] = opcode
+        self.mem[0xFFFD] = 0x00
+        self.mem[0xFFFE] = 0x80
+        self.mem[0x8000] = 0x00
+
+        cpu_copy = copy.deepcopy(self.cpu)
+
+        cyclesUsed = self.cpu.execute(CycleCounter(4), self.mem)
+        assert cyclesUsed == 4
+
+        assert self.mem[0x8000] == 0x2F
+
+        self.VerifyUnmodifiedFlagsST_Register(cpu_copy)
+
+    def ST_register_ZPX(self, opcode, register):
+        self.cpu.X = 0x0F
+        setattr(self.cpu, register, 0x42)
+        self.mem[0xFFFC] = opcode
+        self.mem[0xFFFD] = 0x80
+        self.mem[0x008F] = 0x00
+
+        cpu_copy = copy.deepcopy(self.cpu)
+
+        cyclesUsed = self.cpu.execute(CycleCounter(4), self.mem)
+        assert cyclesUsed == 4
+
+        assert self.mem[0x008F] == 0x42
+
+        self.VerifyUnmodifiedFlagsST_Register(cpu_copy)
+
+    def test_STA_ZP(self):
+        self.ST_register_ZP(INS_STA_ZP, "A")
+    def test_STX_ZP(self):
+        self.ST_register_ZP(INS_STX_ZP, "X")
+    def test_STY_ZP(self):
+        self.ST_register_ZP(INS_STY_ZP, "Y")
+
+    def test_STA_ABS(self):
+        self.ST_register_ABS(INS_STA_ABS, "A")
+    def test_STX_ABS(self):
+        self.ST_register_ABS(INS_STX_ABS, "X")
+    def test_STY_ABS(self):
+        self.ST_register_ABS(INS_STY_ABS, "Y")
+
+    def test_STA_ZPX(self):
+        self.ST_register_ZPX(INS_STA_ZPX, "A")
+    def test_STY_ZPX(self):
+        self.ST_register_ZPX(INS_STY_ZPX, "Y")
+
+    def test_STA_ABSX(self):
+        self.cpu.A = 0x42
+        self.cpu.X = 0x0F
+
+        self.mem[0xFFFC] = INS_STA_ABSX
+        self.mem[0xFFFD] = 0x00
+        self.mem[0xFFFE] = 0x80
+
+        cpu_copy = copy.deepcopy(self.cpu)
+
+        cyclesUsed = self.cpu.execute(CycleCounter(5), self.mem)
+        assert cyclesUsed == 5
+
+        assert self.mem[0x800F] == 0x42
+
+        self.VerifyUnmodifiedFlagsST_Register(cpu_copy)
+
+    def test_STA_ABSY(self):
+        self.cpu.A = 0x42
+        self.cpu.Y = 0x0F
+
+        self.mem[0xFFFC] = INS_STA_ABSX
+        self.mem[0xFFFD] = 0x00
+        self.mem[0xFFFE] = 0x80
+
+        cpu_copy = copy.deepcopy(self.cpu)
+
+        cyclesUsed = self.cpu.execute(CycleCounter(5), self.mem)
+        assert cyclesUsed == 5
+
+        assert self.mem[0x800F] == 0x42
+
+        self.VerifyUnmodifiedFlagsST_Register(cpu_copy)
+
+    def test_STA_INDX(self):
+        self.cpu.A = 0x42
+        self.cpu.X = 0x0F
+
+        self.mem[0xFFFC] = INS_STA_INDX
+        self.mem[0xFFFD] = 0x20
+        self.mem[0x002F] = 0x00
+        self.mem[0x0030] = 0x80
+        self.mem[0x8000] = 0x00
+        cpu_copy = copy.deepcopy(self.cpu)
+
+        cyclesUsed = self.cpu.execute(CycleCounter(6), self.mem)
+        assert cyclesUsed == 6
+
+        assert self.mem[0x8000] == 0x42
+
+        self.VerifyUnmodifiedFlagsST_Register(cpu_copy)
+
+    def test_STA_INDY(self):
+        self.cpu.A = 0x42
+        self.cpu.Y = 0x0F
+
+        self.mem[0xFFFC] = INS_STA_INDX
+        self.mem[0xFFFD] = 0x20
+        self.mem[0x0020] = 0x00
+        self.mem[0x0021] = 0x80
+        self.mem[0x8000 + 0x0F] = 0x00
+        cpu_copy = copy.deepcopy(self.cpu)
+
+        cyclesUsed = self.cpu.execute(CycleCounter(6), self.mem)
+        assert cyclesUsed == 6
+
+        assert self.mem[0x8000 + 0x0F] == 0x42
+
+        self.VerifyUnmodifiedFlagsST_Register(cpu_copy)
