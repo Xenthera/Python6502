@@ -1,5 +1,6 @@
 import random
 from bdb import effective
+from numbers import Number
 
 
 class Memory:
@@ -65,6 +66,7 @@ INS_STA_ABS = 0x8D
 INS_STA_ABSX = 0x9D
 INS_STA_ABSY = 0x99
 INS_STA_INDX = 0x81
+INS_STA_INDY = 0x91
 
 INS_STX_ZP = 0x86
 INS_STX_ABS = 0x8E
@@ -145,6 +147,10 @@ class Cpu6502:
         word_data = low | (high << 8)
         return word_data & 0xFFFF
 
+    def write_byte(self, value, cycles : CycleCounter, memory : Memory, address : int):
+        memory[address & 0xFFFF] = value & 0xFF
+        cycles -= 1
+
     # Addressing mode handling
     # Zero Page
     def addr_zero_page(self, cycles: CycleCounter, memory : Memory):
@@ -180,6 +186,21 @@ class Cpu6502:
         if abs_addr >> 8 != abs_addr_y >> 8:  # page crossed
             cycles -= 1
         return abs_addr_y & 0xFFFF
+
+    def addr_indirect_x(self, cycles: CycleCounter, memory: Memory):
+        zp_address = self.fetch_byte(cycles, memory)
+        zp_address += self.X & 0xFF
+        cycles -= 1
+        effective_address = self.read_word(cycles, memory, zp_address)
+        return effective_address & 0xFFFF
+
+    def addr_indirect_y(self, cycles: CycleCounter, memory: Memory):
+        zp_address = self.fetch_byte(cycles, memory)
+        effective_address = self.read_word(cycles, memory, zp_address)
+        effective_address_y = effective_address + self.Y & 0xFFFF
+        if effective_address >> 8 != effective_address_y >> 8:  # page crossed
+            cycles -= 1
+        return effective_address_y
 
     def LD_register_set_status(self, register):
         reg_value = getattr(self, register)
@@ -246,20 +267,63 @@ class Cpu6502:
             self.load_register(cycles, memory, address, "X")
 
         elif ins == INS_LDA_INDX:
-            zp_address = self.fetch_byte(cycles, memory)
-            zp_address += self.X & 0xFF
-            cycles -= 1
-            effective_address = self.read_word(cycles, memory, zp_address)
-            self.load_register(cycles, memory, effective_address, "A")
+            address = self.addr_indirect_x(cycles, memory)
+            self.load_register(cycles, memory, address, "A")
+
         elif ins == INS_LDA_INDY:
-            zp_address = self.fetch_byte(cycles, memory)
-            effective_address = self.read_word(cycles, memory, zp_address)
-            effective_address_y = effective_address + self.Y & 0xFFFF
-            if effective_address >> 8 != effective_address_y >> 8:  # page crossed
-                cycles -= 1
-            self.load_register(cycles, memory, effective_address_y, "A")
+            address = self.addr_indirect_y(cycles, memory)
+            self.load_register(cycles, memory, address, "A")
+
         elif ins == INS_STA_ZP:
             address = self.addr_zero_page(cycles, memory)
+            self.write_byte(self.A, cycles, memory, address)
+
+        elif ins == INS_STX_ZP:
+            address = self.addr_zero_page(cycles, memory)
+            self.write_byte(self.X, cycles, memory, address)
+
+        elif ins == INS_STY_ZP:
+            address = self.addr_zero_page(cycles, memory)
+            self.write_byte(self.Y, cycles, memory, address)
+
+        elif ins == INS_STA_ABS:
+            address = self.addr_absolute(cycles, memory)
+            self.write_byte(self.A, cycles, memory, address)
+
+        elif ins == INS_STX_ABS:
+            address = self.addr_absolute(cycles, memory)
+            self.write_byte(self.X, cycles, memory, address)
+
+        elif ins == INS_STY_ABS:
+            address = self.addr_absolute(cycles, memory)
+            self.write_byte(self.Y, cycles, memory, address)
+
+        elif ins == INS_STA_ZPX:
+            address = self.addr_zero_page_x(cycles, memory)
+            self.write_byte(self.A, cycles, memory, address)
+
+        elif ins == INS_STY_ZPX:
+            address = self.addr_zero_page_x(cycles, memory)
+            self.write_byte(self.Y, cycles, memory, address)
+
+        elif ins == INS_STA_ABSX:
+            address = self.addr_absolute_x(cycles, memory)
+            self.write_byte(self.A, cycles, memory, address)
+            cycles -= 1
+
+        elif ins == INS_STA_ABSY:
+            address = self.addr_absolute_y(cycles, memory)
+            self.write_byte(self.A, cycles, memory, address)
+            cycles -= 1
+
+        elif ins == INS_STA_INDX:
+            address = self.addr_indirect_x(cycles, memory)
+            self.write_byte(self.A, cycles, memory, address)
+
+        elif ins == INS_STA_INDY:
+            address = self.addr_indirect_y(cycles, memory)
+            cycles -= 1
+            self.write_byte(self.A, cycles, memory, address)
 
         elif ins == INS_JSR:
             subroutine_address = self.fetch_word(cycles, memory)

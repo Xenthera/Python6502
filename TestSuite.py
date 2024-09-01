@@ -444,25 +444,43 @@ class TestStoreRegisterOperations:
         self.VerifyUnmodifiedFlagsST_Register(cpu_copy)
 
     def test_STA_ZP(self):
+        self.cpu.reset(self.mem)
         self.ST_register_ZP(INS_STA_ZP, "A")
+
     def test_STX_ZP(self):
+        self.cpu.reset(self.mem)
         self.ST_register_ZP(INS_STX_ZP, "X")
+
     def test_STY_ZP(self):
+        self.cpu.reset(self.mem)
         self.ST_register_ZP(INS_STY_ZP, "Y")
 
+
     def test_STA_ABS(self):
+        self.cpu.reset(self.mem)
         self.ST_register_ABS(INS_STA_ABS, "A")
+
     def test_STX_ABS(self):
+        self.cpu.reset(self.mem)
         self.ST_register_ABS(INS_STX_ABS, "X")
+
     def test_STY_ABS(self):
+        self.cpu.reset(self.mem)
         self.ST_register_ABS(INS_STY_ABS, "Y")
 
+
     def test_STA_ZPX(self):
+        self.cpu.reset(self.mem)
         self.ST_register_ZPX(INS_STA_ZPX, "A")
+
     def test_STY_ZPX(self):
+        self.cpu.reset(self.mem)
         self.ST_register_ZPX(INS_STY_ZPX, "Y")
 
+
     def test_STA_ABSX(self):
+        self.cpu.reset(self.mem)
+
         self.cpu.A = 0x42
         self.cpu.X = 0x0F
 
@@ -480,10 +498,12 @@ class TestStoreRegisterOperations:
         self.VerifyUnmodifiedFlagsST_Register(cpu_copy)
 
     def test_STA_ABSY(self):
+        self.cpu.reset(self.mem)
+
         self.cpu.A = 0x42
         self.cpu.Y = 0x0F
 
-        self.mem[0xFFFC] = INS_STA_ABSX
+        self.mem[0xFFFC] = INS_STA_ABSY
         self.mem[0xFFFD] = 0x00
         self.mem[0xFFFE] = 0x80
 
@@ -497,6 +517,8 @@ class TestStoreRegisterOperations:
         self.VerifyUnmodifiedFlagsST_Register(cpu_copy)
 
     def test_STA_INDX(self):
+        self.cpu.reset(self.mem)
+
         self.cpu.A = 0x42
         self.cpu.X = 0x0F
 
@@ -515,10 +537,12 @@ class TestStoreRegisterOperations:
         self.VerifyUnmodifiedFlagsST_Register(cpu_copy)
 
     def test_STA_INDY(self):
+        self.cpu.reset(self.mem)
+
         self.cpu.A = 0x42
         self.cpu.Y = 0x0F
 
-        self.mem[0xFFFC] = INS_STA_INDX
+        self.mem[0xFFFC] = INS_STA_INDY
         self.mem[0xFFFD] = 0x20
         self.mem[0x0020] = 0x00
         self.mem[0x0021] = 0x80
