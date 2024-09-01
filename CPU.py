@@ -2,7 +2,7 @@ import random
 from bdb import effective
 from numbers import Number
 
-
+# The cpu
 class Memory:
     MAX_SIZE = 1024 * 64
     data = [0] * MAX_SIZE
