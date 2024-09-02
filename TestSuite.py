@@ -587,3 +587,6 @@ class TestJumpsAndCalls:
         assert cyclesUsed == 6 + 6 + 2
 
         assert self.cpu.A == 0x42
+        assert self.cpu.SP == cpuCopy.SP
+
+        self.VerifyUnmodifiedFlags(cpuCopy)
