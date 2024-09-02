@@ -555,3 +555,35 @@ class TestStoreRegisterOperations:
         assert self.mem[0x8000 + 0x0F] == 0x42
 
         self.VerifyUnmodifiedFlagsST_Register(cpu_copy)
+
+class TestJumpsAndCalls:
+
+    mem = Memory()
+    cpu = Cpu6502()
+
+    def VerifyUnmodifiedFlags(self, cpuCopy):
+        assert self.cpu.C == cpuCopy.C
+        assert self.cpu.I == cpuCopy.I
+        assert self.cpu.D == cpuCopy.D
+        assert self.cpu.B == cpuCopy.B
+        assert self.cpu.V == cpuCopy.V
+        assert self.cpu.N == cpuCopy.N
+        assert self.cpu.Z == cpuCopy.Z
+
+    def test_jump_and_return(self):
+        self.cpu.reset(self.mem, 0xFF00)
+
+        self.mem[0xFF00] = INS_JSR
+        self.mem[0xFF01] = 0x00
+        self.mem[0xFF02] = 0x80
+        self.mem[0x8000] = INS_RTS
+        self.mem[0xFF03] = INS_LDA_IM
+        self.mem[0xFF04] = 0x42
+
+
+        cpuCopy = copy.deepcopy(self.cpu)
+
+        cyclesUsed = self.cpu.execute(CycleCounter(6 + 6 + 2), self.mem)
+        assert cyclesUsed == 6 + 6 + 2
+
+        assert self.cpu.A == 0x42

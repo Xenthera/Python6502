@@ -17,10 +17,7 @@ class Memory:
     def __setitem__(self, key, value):
         self.data[key] = value
 
-    def write_word(self, value, address, cycles):
-        self.data[address] = value & 0xFF
-        self.data[address + 1] = (value >> 8) & 0xFF
-        cycles -= 2
+
 
 
 # Used because python ints are immutable when passed into function :(
@@ -75,9 +72,8 @@ INS_STY_ZP = 0x84
 INS_STY_ABS = 0x8C
 INS_STY_ZPX = 0x94
 
-
-
 INS_JSR = 0x20
+INS_RTS = 0x60
 
 #endregion
 
@@ -109,13 +105,14 @@ class Cpu6502:
         # address bus
         self.address = 0
 
-
-    def reset(self, memory):
-        self.PC = 0xFFFC
+    def reset(self, memory, reset_vector = 0xFFFC):
+        self.PC = reset_vector
         self.SP = 0xFF
         self.C = self.Z = self.I = self.D = self.B = self.V = self.N = 0
         self.A = self.X = self.Y = 0
         memory.initialize()
+
+
 
     def fetch_byte(self, cycles: CycleCounter, memory: Memory):
         byte_data = memory[self.PC] & 0xFF
@@ -150,6 +147,21 @@ class Cpu6502:
     def write_byte(self, value, cycles : CycleCounter, memory : Memory, address : int):
         memory[address & 0xFFFF] = value & 0xFF
         cycles -= 1
+
+    def write_word(self, value, cycles : CycleCounter, memory : Memory, address : int):
+        memory[address] = value & 0xFF
+        memory[address + 1] = (value >> 8) & 0xFF
+        cycles -= 2
+
+    def push_pc_to_stack(self, cycles: CycleCounter, memory: Memory):
+        self.write_word(self.PC - 1, cycles, memory, (self.SP & 0xFFFF) - 1)
+        self.SP -= 2
+
+    def pop_word_from_stack(self, cycles: CycleCounter, memory: Memory):
+        value = self.read_word(cycles, memory, (self.SP & 0xFFFF) + 1)
+        self.SP += 2
+        cycles -= 1
+        return value
 
     # Addressing mode handling
     # Zero Page
@@ -327,10 +339,14 @@ class Cpu6502:
 
         elif ins == INS_JSR:
             subroutine_address = self.fetch_word(cycles, memory)
-            memory.write_word( self.PC - 1, self.SP, cycles)
-            self.SP += 2
+            self.push_pc_to_stack(cycles, memory)
             self.PC = subroutine_address
             cycles -= 1
+
+        elif ins == INS_RTS:
+            ret_addr = self.pop_word_from_stack(cycles, memory)
+            self.PC = ret_addr + 1
+            cycles -= 2
 
         else:
             raise Exception("Invalid instruction: " + hex(ins))
